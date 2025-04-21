@@ -23,11 +23,11 @@ const SignupPage = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    const encryptedUsername = encryptData(publicKey, username);
+    // const encryptedUsername = encryptData(publicKey, username);
     const encryptedEmail = encryptData(publicKey, email);
 
     try {
-      const response = await fetch('/api/graphql', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/graphql`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +43,7 @@ const SignupPage = () => {
             }
           `,
           variables: {
-            username: encryptedUsername,
+            username,
             password: password,
             email: encryptedEmail,
           },
@@ -52,7 +52,7 @@ const SignupPage = () => {
 
       const data = await response.json();
 
-      if (data.data.createUser) {
+      if (data.data?.createUser) {
         // Redirect to login page
         router.push('/login');
       } else {

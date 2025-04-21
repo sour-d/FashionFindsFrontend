@@ -1,18 +1,7 @@
 "use client";
 import { useState } from 'react';
-import { encryptData } from '@/lib/utils';
 import { useUser } from '@/context/UserContext';
 import { useRouter } from 'next/navigation';
-
-const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxmow6645X53ai/0+RmNL
-zc5cZmV1Y0wiS91ZV0Vx85/RRGnS4yIH1z/upLmkThrug0PvdcjG2ytm+hkEHOPG
-RHOthsZqzqExilZLOm3ErEJIVYeHwdugvdpFkm1iNofs1aWHZuEQTH81BF4pR0aj
-lkg3OJHVwQ/9yihxV42H2xBC7S6La2WE0/jawlgeDVjPhgDSaSLipGKIj6M7CyRZ
-fLuTG5Qx1uYSAMZgzq+mkIFlYWtxzYMc4Wy86pC9eS0snlRBq37dVU6rwoUttDmI
-6el18RBSWag0Xkh0TSXtuuSzaUGjIPjbqQKReINkeJAO6w6L7ocGOrz6qEnA6IaG
-jwIDAQAB
------END PUBLIC KEY-----`;
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -24,10 +13,8 @@ const LoginPage = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    const encryptedUsername = encryptData(publicKey, username);
-
     try {
-      const response = await fetch('/api/graphql', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/graphql`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,7 +26,7 @@ const LoginPage = () => {
             }
           `,
           variables: {
-            username: encryptedUsername,
+            username,
             password: password,
           },
         }),
@@ -53,13 +40,32 @@ const LoginPage = () => {
         localStorage.setItem('token', token);
         setToken(token);
 
-        const user = {
-          id: 'default',
-          username: 'defaultuser',
-          email: 'default@example.com',
-        };
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
+        // Fetch user data using the me query
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/graphql`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            query: `
+              query {
+                me {
+                  id
+                  username
+                  email
+                }
+              }
+            `,
+          }),
+        });
+
+        const userData = await userResponse.json();
+
+        if (userData.data?.me) {
+          localStorage.setItem('user', JSON.stringify(userData.data.me));
+          setUser(userData.data.me);
+        }
 
         router.push('/');
       } else {
